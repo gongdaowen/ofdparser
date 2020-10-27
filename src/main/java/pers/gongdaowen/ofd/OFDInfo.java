@@ -1,22 +1,38 @@
 package pers.gongdaowen.ofd;
 
-import pers.gongdaowen.ofd.model.*;
-import org.bouncycastle.crypto.Digest;
-import org.bouncycastle.crypto.digests.SM3Digest;
-import sun.awt.image.BufferedImageGraphicsConfig;
-import pers.gongdaowen.ofd.utils.Base64Utils;
-import pers.gongdaowen.ofd.utils.BeanUtils;
-import pers.gongdaowen.ofd.utils.OfdUtils;
-
-import java.awt.*;
+import java.awt.AlphaComposite;
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.Point;
+import java.awt.Rectangle;
+import java.awt.RenderingHints;
+import java.awt.Transparency;
 import java.awt.geom.AffineTransform;
-import java.awt.geom.Point2D;
+import java.awt.geom.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.bouncycastle.crypto.Digest;
+import org.bouncycastle.crypto.digests.SM3Digest;
+
+import pers.gongdaowen.ofd.model.Invoice;
+import pers.gongdaowen.ofd.model.OFD;
+import pers.gongdaowen.ofd.model.OFDContent;
+import pers.gongdaowen.ofd.model.OFDDocument;
+import pers.gongdaowen.ofd.model.OFDDocumentRes;
+import pers.gongdaowen.ofd.model.OFDSignatures;
+import pers.gongdaowen.ofd.utils.Base64Utils;
+import pers.gongdaowen.ofd.utils.BeanUtils;
+import pers.gongdaowen.ofd.utils.OfdUtils;
+import sun.awt.image.BufferedImageGraphicsConfig;
 
 public class OFDInfo {
 
@@ -151,7 +167,11 @@ public class OFDInfo {
             // 文档默认区域大小
             String pageArea = ofd.DocBody.$OFDDocument.CommonData.PageArea.PhysicalBox;
             // 计算宽度和高度
-            String[] parts = BeanUtils.emptyFilter(page.$OFDContent.Area.PhysicalBox, pageArea).split(" ");
+            String physicalBox = "";
+            if (BeanUtils.isNotEmpty(page.$OFDContent.Area)) {
+                physicalBox = page.$OFDContent.Area.PhysicalBox;
+            }
+            String[] parts = BeanUtils.emptyFilter(physicalBox, pageArea).split(" ");
             int width = (int) (dpi * Integer.valueOf(parts[2]));
             int height = (int) (dpi * Integer.valueOf(parts[3]));
 
@@ -292,10 +312,10 @@ public class OFDInfo {
         String[] boundStrs = boundary.split(" ");
 
         Double[] bounds = new Double[boundStrs.length];
-        bounds[0] = Double.valueOf(boundStrs[0]) * dpi;
-        bounds[1] = Double.valueOf(boundStrs[1]) * dpi;
-        bounds[2] = Double.valueOf(boundStrs[2]) * dpi;
-        bounds[3] = Double.valueOf(boundStrs[3]) * dpi;
+        bounds[0] = Double.parseDouble(boundStrs[0]) * dpi;
+        bounds[1] = Double.parseDouble(boundStrs[1]) * dpi;
+        bounds[2] = Double.parseDouble(boundStrs[2]) * dpi;
+        bounds[3] = Double.parseDouble(boundStrs[3]) * dpi;
 
         Graphics2D g2d = (Graphics2D) g.create(bounds[0].intValue(), bounds[1].intValue(), bounds[2].intValue(), bounds[3].intValue());
 
@@ -303,12 +323,12 @@ public class OFDInfo {
         if (BeanUtils.isNotEmpty(ctm)) {
             String[] ctms = ctm.split(" ");
             AffineTransform transform = new AffineTransform(
-                    Double.valueOf(ctms[0]),
-                    Double.valueOf(ctms[1]),
-                    Double.valueOf(ctms[2]),
-                    Double.valueOf(ctms[3]),
-                    Double.valueOf(ctms[4]) * dpi + bounds[0],
-                    Double.valueOf(ctms[5]) * dpi + bounds[1]);
+                    Double.parseDouble(ctms[0]),
+                    Double.parseDouble(ctms[1]),
+                    Double.parseDouble(ctms[2]),
+                    Double.parseDouble(ctms[3]),
+                    Double.parseDouble(ctms[4]) * dpi + bounds[0],
+                    Double.parseDouble(ctms[5]) * dpi + bounds[1]);
             g2d.setTransform(transform);
         }
         return g2d;
@@ -320,11 +340,11 @@ public class OFDInfo {
         for (int i = 0, len = tmps.length; i < len; i++) {
             if ("g".equals(tmps[i])) {
                 for (int j = 0, len2 = Integer.valueOf(tmps[i + 1]); j < len2; j++) {
-                    list.add(Double.valueOf(tmps[i + 2]));
+                    list.add(Double.parseDouble(tmps[i + 2]));
                 }
                 i += 2;
             } else {
-                list.add(Double.valueOf(tmps[i]));
+                list.add(Double.parseDouble(tmps[i]));
             }
         }
         return list;
@@ -342,27 +362,28 @@ public class OFDInfo {
         return new Color(colorInts[0], colorInts[1], colorInts[2]);
     }
 
-    private void drawObject(Graphics g, String abbreviatedData, double dpi) {
+    private void drawObject(Graphics2D g, String abbreviatedData, double dpi) {
         Point2D.Double sPoint = null, mPoint = null;
         String[] parts = abbreviatedData.split(" (?=[SMLQBAC])");
         for (String part : parts) {
             String[] temps = part.split(" ");
             switch (temps[0]) {
                 case "S": {
-                    sPoint = new Point2D.Double((Double.valueOf(temps[1])) * dpi, (Double.valueOf(temps[2])) * dpi);
+                    sPoint = new Point2D.Double((Double.parseDouble(temps[1])) * dpi, (Double.parseDouble(temps[2])) * dpi);
                     break;
                 }
                 case "M": {
-                    mPoint = new Point2D.Double((Double.valueOf(temps[1])) * dpi, (Double.valueOf(temps[2])) * dpi);
+                    mPoint = new Point2D.Double((Double.parseDouble(temps[1])) * dpi, (Double.parseDouble(temps[2])) * dpi);
                     if (sPoint == null) {
                         sPoint = mPoint;
                     }
                     break;
                 }
                 case "L": {
-                    Point2D.Double lEnd = new Point2D.Double((Double.valueOf(temps[1])) * dpi, (Double.valueOf(temps[2])) * dpi);
+                    Point2D.Double lEnd = new Point2D.Double((Double.parseDouble(temps[1])) * dpi, (Double.parseDouble(temps[2])) * dpi);
                     // 画线
-                    g.drawLine((int) mPoint.getX(), (int) mPoint.getY(), (int) lEnd.getX(), (int) lEnd.getY());
+                    g.draw(new Line2D.Double(mPoint.getX(), mPoint.getY(), lEnd.getX(), lEnd.getY()));
+                    //g.drawLine((int) mPoint.getX(), (int) mPoint.getY(), (int) lEnd.getX(), (int) lEnd.getY());
                     // 重新设置当前点
                     mPoint = lEnd;
                     break;
@@ -370,8 +391,8 @@ public class OFDInfo {
                 case "Q": {
                     Point.Double[] points = new Point.Double[]{
                             mPoint, //起点
-                            new Point.Double((Double.valueOf(temps[1])) * dpi, (Double.valueOf(temps[2])) * dpi), //控制点
-                            new Point.Double((Double.valueOf(temps[3])) * dpi, (Double.valueOf(temps[4])) * dpi), //终点
+                            new Point.Double((Double.parseDouble(temps[1])) * dpi, (Double.parseDouble(temps[2])) * dpi), //控制点
+                            new Point.Double((Double.parseDouble(temps[3])) * dpi, (Double.parseDouble(temps[4])) * dpi), //终点
                     };
                     // 贝塞尔曲线
                     drawBezier(g, points);
@@ -382,9 +403,9 @@ public class OFDInfo {
                 case "B": {
                     Point.Double[] points = new Point.Double[]{
                             mPoint, //起点
-                            new Point.Double((Double.valueOf(temps[1])) * dpi, (Double.valueOf(temps[2])) * dpi), //控制点
-                            new Point.Double((Double.valueOf(temps[3])) * dpi, (Double.valueOf(temps[4])) * dpi), //控制点
-                            new Point.Double((Double.valueOf(temps[5])) * dpi, (Double.valueOf(temps[6])) * dpi), //终点
+                            new Point.Double((Double.parseDouble(temps[1])) * dpi, (Double.parseDouble(temps[2])) * dpi), //控制点
+                            new Point.Double((Double.parseDouble(temps[3])) * dpi, (Double.parseDouble(temps[4])) * dpi), //控制点
+                            new Point.Double((Double.parseDouble(temps[5])) * dpi, (Double.parseDouble(temps[6])) * dpi), //终点
                     };
                     // 贝塞尔曲线
                     drawBezier(g, points);
@@ -396,14 +417,15 @@ public class OFDInfo {
                     break;
                 case "C": {
                     // 画线
-                    g.drawLine((int) mPoint.getX(), (int) mPoint.getY(), (int) sPoint.getX(), (int) sPoint.getY());
+                    g.draw(new Line2D.Double(mPoint.getX(), mPoint.getY(), sPoint.getX(), sPoint.getY()));
+                    //g.drawLine((int) mPoint.getX(), (int) mPoint.getY(), (int) sPoint.getX(), (int) sPoint.getY());
                     break;
                 }
             }
         }
     }
 
-    private void drawBezier(Graphics g, Point2D.Double[] points) {
+    private void drawBezier(Graphics2D g, Point2D.Double[] points) {
         int n = points.length - 1;
         // u的步长决定了曲线点的精度
         for (float u = 0; u <= 1; u += 0.0001) {
@@ -418,7 +440,8 @@ public class OFDInfo {
                     p[i].y = (1 - u) * p[i].y + u * p[i + 1].y;
                 }
             }
-            g.drawOval((int) p[0].x, (int) p[0].y, 1, 1);
+            g.draw(new Ellipse2D.Double(p[0].x, p[0].y, 1d, 1d));
+            // g.drawOval((int) p[0].x, (int) p[0].y, 1, 1);
         }
     }
 }

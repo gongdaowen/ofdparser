@@ -11,6 +11,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.zip.ZipFile;
 
 /**
@@ -34,8 +36,14 @@ public class OfdParser {
             OFDDocument ofdDoc = ofd.DocBody.$OFDDocument = OfdUtils.xmlToObject(zipFile.getStream(ofd.DocBody.DocRoot), OFDDocument.class);
             if (BeanUtils.isNotEmpty(ofdDoc.CommonData)) {
                 // 公共资源
-                String res = BeanUtils.emptyFilter(ofdDoc.CommonData.DocumentRes, ofdDoc.CommonData.PublicRes);
-                if (BeanUtils.isNotEmpty(res)) {
+                List<String> resList = new ArrayList<>();
+                if (BeanUtils.isNotEmpty(ofdDoc.CommonData.DocumentRes)) {
+                    resList.add(ofdDoc.CommonData.DocumentRes);
+                }
+                if (BeanUtils.isNotEmpty(ofdDoc.CommonData.PublicRes)) {
+                    resList.add(ofdDoc.CommonData.PublicRes);
+                }
+                for (String res : resList) {
                     OFDDocumentRes ofdRes = ofdDoc.CommonData.$OFDDocumentRes = OfdUtils.xmlToObject(zipFile.getStream(res), OFDDocumentRes.class);
                     // 图片等信息读取字节数组
                     if (BeanUtils.isNotEmpty(ofdRes.MultiMedias)) {
@@ -118,16 +126,19 @@ public class OfdParser {
                         }
                         // 签章信息
                         OFDSignatures.Seal seal = signature.SignedInfo.Seal;
-                        if (BeanUtils.isNotEmpty(seal)) {
-                            seal.$FileData = zipFile.getBytes(seal.BaseLoc);
-                            File tmpFile = File.createTempFile("ofd-", ".esl");
-                            try (FileOutputStream os = new FileOutputStream(tmpFile)) {
-                                os.write(seal.$FileData);
-                                os.flush();
+                        if (BeanUtils.isEmpty(seal)) {
+                            seal = new OFDSignatures.Seal();
+                            seal.BaseLoc = signature.SignedValue;
+                            signature.SignedInfo.Seal = seal;
+                        }
+                        seal.$FileData = zipFile.getBytes(seal.BaseLoc);
+                        File tmpFile = File.createTempFile("ofd-", ".esl");
+                        try (FileOutputStream os = new FileOutputStream(tmpFile)) {
+                            os.write(seal.$FileData);
+                            os.flush();
 
-                                // 签章文件内容
-                                seal.$OFD = parse(tmpFile).getOfd();
-                            }
+                            // 签章文件内容
+                            seal.$OFD = parse(tmpFile).getOfd();
                         }
                     }
                     ofd.ObjectMap.put("SIGN_" + sign.ID, sign);
