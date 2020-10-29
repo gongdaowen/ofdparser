@@ -1,12 +1,16 @@
 package pers.gongdaowen.ofd.utils;
 
+import sun.misc.BASE64Decoder;
+import sun.misc.BASE64Encoder;
+
 import javax.xml.bind.DatatypeConverter;
+import java.io.IOException;
 import java.nio.charset.Charset;
-import java.util.Base64;
+import java.nio.charset.StandardCharsets;
 
 public class Base64Utils {
 
-    private static final Charset DEFAULT_CHARSET = Charset.forName("UTF-8");
+    private static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
 
     private static final Base64Delegate delegate = new JdkBase64Delegate();
 
@@ -14,16 +18,8 @@ public class Base64Utils {
         return delegate.encode(src);
     }
 
-    public static byte[] decode(byte[] src) {
+    public static byte[] decode(byte[] src) throws IOException {
         return delegate.decode(src);
-    }
-
-    public static byte[] encodeUrlSafe(byte[] src) {
-        return delegate.encodeUrlSafe(src);
-    }
-
-    public static byte[] decodeUrlSafe(byte[] src) {
-        return delegate.decodeUrlSafe(src);
     }
 
     public static String encodeToString(byte[] src) {
@@ -44,7 +40,7 @@ public class Base64Utils {
         }
     }
 
-    public static byte[] decodeFromString(String src) {
+    public static byte[] decodeFromString(String src) throws IOException {
         if (src == null) {
             return null;
         }
@@ -62,24 +58,11 @@ public class Base64Utils {
         }
     }
 
-    public static String encodeToUrlSafeString(byte[] src) {
-        return new String(delegate.encodeUrlSafe(src), DEFAULT_CHARSET);
-    }
-
-    public static byte[] decodeFromUrlSafeString(String src) {
-        return delegate.decodeUrlSafe(src.getBytes(DEFAULT_CHARSET));
-    }
-
-
     interface Base64Delegate {
 
         byte[] encode(byte[] src);
 
-        byte[] decode(byte[] src);
-
-        byte[] encodeUrlSafe(byte[] src);
-
-        byte[] decodeUrlSafe(byte[] src);
+        byte[] decode(byte[] src) throws IOException;
     }
 
 
@@ -90,31 +73,15 @@ public class Base64Utils {
             if (src == null || src.length == 0) {
                 return src;
             }
-            return Base64.getEncoder().encode(src);
+            return new BASE64Encoder().encode(src).getBytes(DEFAULT_CHARSET);
         }
 
         @Override
-        public byte[] decode(byte[] src) {
+        public byte[] decode(byte[] src) throws IOException {
             if (src == null || src.length == 0) {
                 return src;
             }
-            return Base64.getDecoder().decode(src);
-        }
-
-        @Override
-        public byte[] encodeUrlSafe(byte[] src) {
-            if (src == null || src.length == 0) {
-                return src;
-            }
-            return Base64.getUrlEncoder().encode(src);
-        }
-
-        @Override
-        public byte[] decodeUrlSafe(byte[] src) {
-            if (src == null || src.length == 0) {
-                return src;
-            }
-            return Base64.getUrlDecoder().decode(src);
+            return new BASE64Decoder().decodeBuffer(new String(src, DEFAULT_CHARSET));
         }
 
     }

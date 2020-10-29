@@ -1,10 +1,9 @@
 package pers.gongdaowen.ofd.model;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlAttribute;
-import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.*;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @XmlRootElement(namespace = "http://www.ofdspec.org/2016", name = "OFD")
@@ -34,5 +33,21 @@ public class OFD {
     public static class DocInfo {
         public String DocID;
         public String Creator;
+        public String Author;
+        public String CreationDate;
+        public CustomDatas CustomDatas;
+    }
+
+    @XmlAccessorType(XmlAccessType.FIELD)
+    public static class CustomDatas {
+        public List<CustomData> CustomData = new ArrayList<>();
+    }
+
+    @XmlAccessorType(XmlAccessType.FIELD)
+    public static class CustomData {
+        @XmlAttribute(name = "Name")
+        public String Name;
+        @XmlValue
+        public String Value;
     }
 }
