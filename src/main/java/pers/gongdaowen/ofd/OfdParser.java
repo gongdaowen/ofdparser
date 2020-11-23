@@ -1,11 +1,12 @@
 package pers.gongdaowen.ofd;
 
-import pers.gongdaowen.ofd.model.*;
-import pers.gongdaowen.ofd.utils.*;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.DERBitString;
 import org.bouncycastle.asn1.DEROctetString;
+import pers.gongdaowen.ofd.model.*;
+import pers.gongdaowen.ofd.utils.BeanUtils;
+import pers.gongdaowen.ofd.utils.OfdUtils;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -34,6 +35,8 @@ public class OfdParser {
 
             // 2. 读取Document.xml文件
             OFDDocument ofdDoc = ofd.DocBody.$OFDDocument = OfdUtils.xmlToObject(zipFile.getStream(ofd.DocBody.DocRoot), OFDDocument.class);
+            // 文档默认区域大小
+            String pageArea = ofd.DocBody.$OFDDocument.CommonData.PageArea.PhysicalBox;
             if (BeanUtils.isNotEmpty(ofdDoc.CommonData)) {
                 // 公共资源
                 List<String> resList = new ArrayList<>();
@@ -77,16 +80,36 @@ public class OfdParser {
                 }
                 // TemplatePage
                 if (BeanUtils.isNotEmpty(ofdDoc.CommonData.TemplatePage)) {
-                    for (OFDDocument.Page page : ofdDoc.CommonData.TemplatePage) {
+                    for (int p = 1; p <= ofdDoc.CommonData.TemplatePage.size(); p++) {
+                        OFDDocument.Page page = ofdDoc.CommonData.TemplatePage.get(p - 1);
+
+                        page.$Index = p;
                         page.$OFDContent = OfdUtils.xmlToObject(zipFile.getStream(page.BaseLoc), OFDContent.class);
+
+                        if (BeanUtils.isNotEmpty(page.$OFDContent.Area) && BeanUtils.isNotEmpty(page.$OFDContent.Area.PhysicalBox)) {
+                            page.$Rectangle = BeanUtils.parseRectangle(page.$OFDContent.Area.PhysicalBox);
+                        } else {
+                            page.$Rectangle = BeanUtils.parseRectangle(pageArea);
+                        }
+
                         ofd.ObjectMap.put(page.ID, page);
                     }
                 }
             }
             // Page
             if (BeanUtils.isNotEmpty(ofdDoc.Pages)) {
-                for (OFDDocument.Page page : ofdDoc.Pages.Page) {
+                for (int p = 1; p <= ofdDoc.Pages.Page.size(); p++) {
+                    OFDDocument.Page page = ofdDoc.Pages.Page.get(p - 1);
+
+                    page.$Index = p;
                     page.$OFDContent = OfdUtils.xmlToObject(zipFile.getStream(page.BaseLoc), OFDContent.class);
+
+                    if (BeanUtils.isNotEmpty(page.$OFDContent.Area) && BeanUtils.isNotEmpty(page.$OFDContent.Area.PhysicalBox)) {
+                        page.$Rectangle = BeanUtils.parseRectangle(page.$OFDContent.Area.PhysicalBox);
+                    } else {
+                        page.$Rectangle = BeanUtils.parseRectangle(pageArea);
+                    }
+
                     ofd.ObjectMap.put(page.ID, page);
                 }
             }
@@ -140,8 +163,17 @@ public class OfdParser {
                             // 签章文件内容
                             seal.$OFD = parse(tmpFile).getOfd();
                         }
+
+                        // 记录章所在的页码
+                        int page = Integer.parseInt(signature.SignedInfo.StampAnnot.PageRef);
+                        if (!ofd.PageSignMap.containsKey(page)) {
+                            ofd.PageSignMap.put(page, new ArrayList<OFDSignatures.Sign>());
+                        }
+                        ofd.PageSignMap.get(page).add(sign);
                     }
                     ofd.ObjectMap.put("SIGN_" + sign.ID, sign);
+
+
                 }
             }
             return new OFDInfo(ofd);

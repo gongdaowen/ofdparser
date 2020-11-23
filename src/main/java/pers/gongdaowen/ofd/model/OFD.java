@@ -10,7 +10,10 @@ import java.util.Map;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class OFD {
 
+    @XmlTransient
     public Map<String, Object> ObjectMap = new HashMap<>();
+    @XmlTransient
+    public Map<Integer, List<OFDSignatures.Sign>> PageSignMap = new HashMap<>();
 
     @XmlAttribute(name = "DocType")
     public String DocType;

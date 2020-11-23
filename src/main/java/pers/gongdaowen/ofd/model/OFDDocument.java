@@ -1,6 +1,7 @@
 package pers.gongdaowen.ofd.model;
 
 import javax.xml.bind.annotation.*;
+import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,6 +46,8 @@ public class OFDDocument {
         @XmlAttribute(name = "BaseLoc")
         public String BaseLoc;
 
+        public int $Index;
         public OFDContent $OFDContent;
+        public Rectangle2D $Rectangle;
     }
 }

@@ -1,5 +1,8 @@
 package pers.gongdaowen.ofd.utils;
 
+import java.awt.*;
+import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -43,6 +46,16 @@ public class BeanUtils {
         return str;
     }
 
+    public static Rectangle2D parseRectangle(String area) {
+        String[] parts = area.split(" ");
+        return new Rectangle2D.Double(
+            Integer.parseInt(parts[0]),
+            Integer.parseInt(parts[1]),
+            Integer.parseInt(parts[2]),
+            Integer.parseInt(parts[3])
+        );
+    }
+
     public static <T> T[] convertArray(Object[] objs, Class<T> clz) {
         List<Object> list = new ArrayList<>();
         for (Object obj : objs) {
@@ -69,6 +82,31 @@ public class BeanUtils {
             }
         }
         return (T[]) list.toArray();
+    }
+
+    public static BufferedImage mergeImages(List<BufferedImage> images) {
+        int width = 0;
+        int height = 0;
+        for (BufferedImage img : images) {
+            width   = Math.max(width, img.getWidth());
+            height += img.getHeight();
+        }
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        Graphics g = image.getGraphics();
+        // 背景色
+        g.setColor(Color.white);
+        g.fillRect(0, 0, image.getWidth(), image.getHeight());
+        // 合并图像
+        int y = 0;
+        for (BufferedImage img : images) {
+            // 如果图像小于画布，则居中显示
+            int x = (image.getWidth() - img.getWidth()) / 2;
+            g.drawImage(img, x, y, null);
+            // 设置下次画的起始Y坐标
+            y += img.getHeight();
+        }
+        g.dispose();
+        return image;
     }
 
     /**
